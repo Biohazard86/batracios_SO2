@@ -1,2 +1,5 @@
 # batracios_SO2
-Practica Linux grupo 2020/ Frogger
+ENUNCIADO:
+https://drive.google.com/file/d/1bvqmSDJ8ehaTZcSiuUpHGWyLwlv_bcR4/view?usp=sharing
+
+
