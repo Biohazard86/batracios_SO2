@@ -30,6 +30,19 @@
 // -------------------------------------------------------------------------------------------------------
 // DEFINICIONES USADAS
 #define TICS_DEFECTO 50
+#define MAX_TOTAL_PROCESOS 35
+#define MAX_RANAS_MADRE 4
+#define MAX_RANAS_HIJAS 30
+// DEFINICIONES DE SEMAFOROS
+#define MAIN_PANTALLA 1
+#define RANA_MADRE_1 2
+#define RANA_MADRE_2 3
+#define RANA_MADRE_3 4
+#define RANA_MADRE_4 5
+#define SEMAF_RANITAS_NACIDAS 6
+#define SEMAF_RANITAS_SALVADAS 7
+#define SEMAF_RANITAS_MUERTAS 8
+#define SEMAF_POSICIONES 9
 
 
 // -------------------------------------------------------------------------------------------------------
@@ -147,6 +160,33 @@ int main (int argc, char *argv[]){
     fprintf(stdout, "\nMS: %d", ms);
     fprintf(stdout, "\nTICS: %d", tics);    
     fprintf(stdout, "\n");
+
+
+    // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    // Comenzamos "el programa"
+
+    //Creamos el semaforo y guardamos su ID en la variable   
+    idSemaforo = semget( IPC_PRIVATE,10, IPC_CREAT | 0600);     // IPC_PRIVATE porque solo va a ser usado por el proceso y sus descendientes - 10 el num de semaforos
+
+    // Semaforo para el numero max de ranas hijas (MAX_RANAS_HIJAS)
+    semctl(idSemaforo, MAIN_PANTALLA, SETVAL, 1);
+
+    // Vamos a crear los semaforos que controlan las 4 ranas madre, que van a generar las ranitas
+    // Uno para cada rana madre.
+    semctl(idSemaforo, RANA_MADRE_1, SETVAL, 1);
+    semctl(idSemaforo, RANA_MADRE_2, SETVAL, 1);
+    semctl(idSemaforo, RANA_MADRE_3, SETVAL, 1);
+    semctl(idSemaforo, RANA_MADRE_4, SETVAL, 1);
+
+
+    // Cramos semaforos para acceder a memoria compartida
+    semctl(idSemaforo, SEMAF_RANITAS_NACIDAS, SETVAL, 1);
+    semctl(idSemaforo, SEMAF_RANITAS_SALVADAS, SETVAL, 1);
+    semctl(idSemaforo, SEMAF_RANITAS_MUERTAS, SETVAL, 1);
+    semctl(idSemaforo, SEMAF_POSICIONES, SETVAL, 1);
+
+    // Vamos a crear la memoria compartida
+
 
 }
 // FIN MAIN------------------------------------------------------------------------------------------------------
