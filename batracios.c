@@ -186,6 +186,8 @@ int main (int argc, char *argv[]){
     semctl(idSemaforo, SEMAF_POSICIONES, SETVAL, 1);
 
     // Vamos a crear la memoria compartida
+    // Se crearan 2048 bytes para la biblioteca usada
+    
 
 
 }
