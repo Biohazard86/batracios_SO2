@@ -1,5 +1,6 @@
 // CURSO 2020/2021
 // SISTEMAS OPERATIVOS II
+// GRUPO: G01
 // DAVID BARRIOS PORTALES
 // Victor Vacas Amigo
 //      ------------------------------
@@ -11,6 +12,20 @@
 // Para poder compilar el programa, hay que hacerlo en el modo de 32bits
 // Se compila con:
 //        gcc batracios.c libbatracios.a -lm -o batracios 
+
+// Si se quiere compilar en modo de 64 bits se debe hacer lo siguiente:
+
+/*
+    1 - Con la orden dpkg --print-architecture, comprobad que realmente tenéis un Linux de 64 bits. Debe aparecer, amd64.
+    2 - Meted ahora la orden dpkg --print-foreign-architectures. Si entre la salida no aparece i386, debéis teclear: sudo dpkg --add-architecture i386
+    3 - Ahora necesitáis tener las bibliotecas de 32 bits también instaladas. Lo lográis con: sudo apt-get install g++-multilib
+    4 - Finalmente, podéis hacer una prueba para ver si todo funciona. Compilad vuestra práctica incluyendo la biblioteca de Linux de 32 bits y la 
+        opción -m32 en la línea de compilación del gcc: gcc -m32...
+    5 - Si la fase anterior no dio ningún error y os generó el ejecutable, probad a ejecutarlo. Si todo ha ido bien, debería ejecutarse sin problemas.
+*/
+
+// Para ejecutarlo: 
+//            gcc batracios.c libbatracios.a -lm -m32 -o batracios  
 
 
 // -------------------------------------------------------------------------------------------------------
@@ -47,7 +62,7 @@
 
 // -------------------------------------------------------------------------------------------------------
 // VARIABLES GLOBALES USADAS
-    int idSemaforo,idMemoria;       //id de los semaforos y memoria
+    int id_semaforo,idMemoria;       //id de los semaforos y memoria
     char *memoria;                  //puntero a memoria compartida para la biblioteca
     char *finalizar;                //puntero a memoria compartida para la variable finalizar
     struct posicion *posiciones;    //puntero a memoria compartida para las posiciones
@@ -66,7 +81,7 @@ void presentacion(){
     fprintf(stderr,"\n\t|----------------------------------------|");
     fprintf(stderr,"\n\t|               BATRACIOS                |");
     fprintf(stderr,"\n\t|----------------------------------------|");
-    fprintf(stderr,"\n\t|                GRUPO ?                 |");
+    fprintf(stderr,"\n\t|               GRUPO G01                |");
     fprintf(stderr,"\n\t|         David Barrios Portales         |");
     fprintf(stderr,"\n\t|           Victor Vacas Amigo           |");
     fprintf(stderr,"\n\t|----------------------------------------|");
@@ -106,6 +121,43 @@ void acabar(int s)
 // -------------------------------------------------------------------------------------------------------
 
 
+
+
+// -------------------------------------------------------------------------------------------------------
+// Funcion SEMAFORO_WAIT
+// Se le tiene que pasar el id del semaforo y un indice 
+// -----------------------------------
+int semaforo_wait( int semid, int indice)
+{
+	struct sembuf oper;
+
+	oper.sem_num=indice; //sobre el semaforo indicado
+	oper.sem_op= -1; //se hace un wait
+	oper.sem_flg=0; //sin indicadores adicionales
+
+	return semop(semid, &oper, 1); //se realiza una operación 
+}
+// -------------------------------------------------------------------------------------------------------
+
+
+// -------------------------------------------------------------------------------------------------------
+// Funcion SEMAFORO_WAIT
+// Se le tiene que pasar el id del semaforo y un indice 
+// -----------------------------------
+int sem_signal( int semid, int indice)
+{
+
+	struct sembuf oper;
+
+	oper.sem_num=indice; //sobre el semaforo indicado
+	oper.sem_op= +1; //se hace un wait
+	oper.sem_flg=0; //sin indicadores adicionales
+
+	return semop(semid, &oper, 1); //se realiza una operación 
+}
+// -------------------------------------------------------------------------------------------------------
+
+
 // ------------------------------------------------------------------------------------------------------
 // Funcion MAIN
 // Hace las llamadas principales
@@ -113,7 +165,14 @@ void acabar(int s)
 int main (int argc, char *argv[]){
 
     // Variables de la funcion MAIN:
-    int ms, tics;
+    int ms, tics;       // ms y tics que se pasan por parametro
+    int idposiciones;   //id de la memoria compartida de las posiciones
+    int i, j, k;        // Contadores para bucles
+    int lTroncos[7]={2,3,4,5,6,2,2};    //Longitudes medias de los troncos de cada fila. Se pueden generar aleatoriamente.
+	int lAguas[7]={5,9,11,2,6,7,8};     //Longitudes medias de los espacios entre troncos de cada fila. Se pueden generar aleatoriamente.
+	int direcciones[7]={1,0,1,0,1,0,1}; //Sentido en el que se mueven los troncos por la pantalla. DERECHA(0) o IZQUIERDA(1)
+
+    pid_t pids_ranas_madre[4]; //guarda los pids de las ranas madre
     
 
     // Llamamos a la presentacion del programa
@@ -166,28 +225,77 @@ int main (int argc, char *argv[]){
     // Comenzamos "el programa"
 
     //Creamos el semaforo y guardamos su ID en la variable   
-    idSemaforo = semget( IPC_PRIVATE,10, IPC_CREAT | 0600);     // IPC_PRIVATE porque solo va a ser usado por el proceso y sus descendientes - 10 el num de semaforos
+    id_semaforo = semget( IPC_PRIVATE,10, IPC_CREAT | 0600);     // IPC_PRIVATE porque solo va a ser usado por el proceso y sus descendientes - 10 el num de semaforos
 
     // Semaforo para el numero max de ranas hijas (MAX_RANAS_HIJAS)
-    semctl(idSemaforo, MAIN_PANTALLA, SETVAL, 1);
+    semctl(id_semaforo, MAIN_PANTALLA, SETVAL, 1);
 
     // Vamos a crear los semaforos que controlan las 4 ranas madre, que van a generar las ranitas
     // Uno para cada rana madre.
-    semctl(idSemaforo, RANA_MADRE_1, SETVAL, 1);
-    semctl(idSemaforo, RANA_MADRE_2, SETVAL, 1);
-    semctl(idSemaforo, RANA_MADRE_3, SETVAL, 1);
-    semctl(idSemaforo, RANA_MADRE_4, SETVAL, 1);
+    semctl(id_semaforo, RANA_MADRE_1, SETVAL, 1);
+    semctl(id_semaforo, RANA_MADRE_2, SETVAL, 1);
+    semctl(id_semaforo, RANA_MADRE_3, SETVAL, 1);
+    semctl(id_semaforo, RANA_MADRE_4, SETVAL, 1);
 
 
     // Cramos semaforos para acceder a memoria compartida
-    semctl(idSemaforo, SEMAF_RANITAS_NACIDAS, SETVAL, 1);
-    semctl(idSemaforo, SEMAF_RANITAS_SALVADAS, SETVAL, 1);
-    semctl(idSemaforo, SEMAF_RANITAS_MUERTAS, SETVAL, 1);
-    semctl(idSemaforo, SEMAF_POSICIONES, SETVAL, 1);
+    semctl(id_semaforo, SEMAF_RANITAS_NACIDAS, SETVAL, 1);
+    semctl(id_semaforo, SEMAF_RANITAS_SALVADAS, SETVAL, 1);
+    semctl(id_semaforo, SEMAF_RANITAS_MUERTAS, SETVAL, 1);
+    semctl(id_semaforo, SEMAF_POSICIONES, SETVAL, 1);
 
     // Vamos a crear la memoria compartida
-    // Se crearan 2048 bytes para la biblioteca usada
-    
+    // Los primeros 2048 bytes estan reservados para la biblioteca.
+    // Guardamos 
+    idMemoria=shmget(IPC_PRIVATE, 2048+sizeof(int) ,IPC_CREAT | IPC_EXCL | 0600);
+
+    //enganchamos el proceso a los segmentos de memoria
+	memoria = (char *)shmat( idMemoria, NULL, 0);
+	posiciones =(struct posicion *) shmat(idposiciones, NULL, 0);
+
+    //Guardamos la direccion de memoria en la var finalizar. Donde acaba la memoria de la biblioteca.
+	//finalizar=&memoria[2048];
+
+    //se inicializa la variable compartida para finalizar a 0
+	*finalizar=0;
+
+    //Vamos a inicializar las posiciones a -3
+	for (i = 0; i <=29; ++i)
+	{
+		posiciones[i].x=-3;
+		posiciones[i].y=-3;
+	}
+
+    //La memoria para las ranitas nacidas
+	semaforo_wait(id_semaforo,SEMAF_RANITAS_NACIDAS);  
+	posiciones[30].x=0;
+	sem_signal(id_semaforo,SEMAF_RANITAS_NACIDAS);
+
+    //memoria para las ranitas salvadas
+	semaforo_wait(id_semaforo,SEMAF_RANITAS_SALVADAS);
+	posiciones[31].x=0;
+	sem_signal(id_semaforo,SEMAF_RANITAS_SALVADAS);
+
+	//memoria para las ranitas perdidas
+	semaforo_wait(id_semaforo,SEMAF_RANITAS_MUERTAS);
+	posiciones[32].x=0;
+	sem_signal(id_semaforo,SEMAF_RANITAS_MUERTAS);
+
+	//-------------------------------------------------------------------------------------
+	//registrar SIGINT para acabar correctamente
+	struct sigaction ss;
+  	ss.sa_handler=acabar; 
+  	ss.sa_flags=0;
+  	sigfillset(&ss.sa_mask);
+  	if (sigaction(SIGINT, &ss, NULL) ==-1){
+  	    return 1;
+    }
+
+
+    // COMENZAMOS!
+    // Le vamos a pasar a la funcion todos los parametros para que comience.
+    BATR_inicio(tics, id_semaforo, lTroncos, lAguas, direcciones, ms, memoria);
+
 
 
 }
