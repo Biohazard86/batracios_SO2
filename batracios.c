@@ -59,16 +59,37 @@
 #define SEMAF_RANITAS_MUERTAS 8
 #define SEMAF_POSICIONES 9
 
+//----------------------------------------------------------------------------------------
+//Prototipos de las funciones de la biblioteca
+
+int BATR_pausa(void);
+int BATR_pausita(void);
+int BATR_inicio(int ret,int semAforos, int lTroncos[],int lAguas[],int dirs[],int tCriar,char *zona);
+int BATR_avance_troncos(int fila);
+void BATR_descansar_criar(void);
+int BATR_parto_ranas(int i,int *dx,int *dy);
+int BATR_puedo_saltar(int x,int y,int direcciOn);
+int BATR_explotar(int x,int y);
+int BATR_avance_rana_ini(int x,int y);
+int BATR_avance_rana(int *x,int *y,int direcciOn);
+int BATR_avance_rana_fin(int x,int y);
+int BATR_comprobar_estadIsticas(int r_nacidas, int r_salvadas, int r_perdidas);
+int BATR_fin(void);
+
+
 
 // -------------------------------------------------------------------------------------------------------
+// Estructura
+    struct posicion_struct {int x,y;};
+
+
 // VARIABLES GLOBALES USADAS
-    int id_semaforo,idMemoria;       //id de los semaforos y memoria
+    int id_semaforo,id_memoria;       //id de los semaforos y memoria
     char *memoria;                  //puntero a memoria compartida para la biblioteca
     char *finalizar;                //puntero a memoria compartida para la variable finalizar
-    struct posicion *posiciones;    //puntero a memoria compartida para las posiciones
+    struct posicion_struct *posiciones;    //puntero a memoria compartida para las posiciones
 
-    // Estructura
-    struct posicion {int x,y;};
+    
 
 
 
@@ -166,7 +187,7 @@ int main (int argc, char *argv[]){
 
     // Variables de la funcion MAIN:
     int ms, tics;       // ms y tics que se pasan por parametro
-    int idposiciones;   //id de la memoria compartida de las posiciones
+    int id_posiciones;   //id de la memoria compartida de las posiciones
     int i, j, k;        // Contadores para bucles
     int lTroncos[7]={2,3,4,5,6,2,2};    //Longitudes medias de los troncos de cada fila. Se pueden generar aleatoriamente.
 	int lAguas[7]={5,9,11,2,6,7,8};     //Longitudes medias de los espacios entre troncos de cada fila. Se pueden generar aleatoriamente.
@@ -215,20 +236,21 @@ int main (int argc, char *argv[]){
     }
 
     // Mostramos los datos obtenidos al usuario
-    fprintf(stdout, "\n\nLos datos introducidos son:");
-    fprintf(stdout, "\nMS: %d", ms);
-    fprintf(stdout, "\nTICS: %d", tics);    
+    fprintf(stdout, "\nLos datos introducidos son:\n");
+    fprintf(stdout, "MS: %d\n", ms);
+    fprintf(stdout, "TICS: %d\n", tics);    
     fprintf(stdout, "\n");
 
 
     // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    // Comenzamos "el programa"
+    // Comenzamos a crear los recursos, semforos, etc.
 
     //Creamos el semaforo y guardamos su ID en la variable   
-    id_semaforo = semget( IPC_PRIVATE,10, IPC_CREAT | 0600);     // IPC_PRIVATE porque solo va a ser usado por el proceso y sus descendientes - 10 el num de semaforos
+    id_semaforo = semget(IPC_PRIVATE, 10, IPC_CREAT | 0600);     // IPC_PRIVATE porque solo va a ser usado por el proceso y sus descendientes - 10 el num de semaforos
+    fprintf(stdout, "Se ha creado el semaforo. Tiene una ID = %d\n", id_semaforo); 
 
     // Semaforo para el numero max de ranas hijas (MAX_RANAS_HIJAS)
-    semctl(id_semaforo, MAIN_PANTALLA, SETVAL, 1);
+    semctl(id_semaforo, MAIN_PANTALLA, SETVAL, 30);
 
     // Vamos a crear los semaforos que controlan las 4 ranas madre, que van a generar las ranitas
     // Uno para cada rana madre.
@@ -236,50 +258,69 @@ int main (int argc, char *argv[]){
     semctl(id_semaforo, RANA_MADRE_2, SETVAL, 1);
     semctl(id_semaforo, RANA_MADRE_3, SETVAL, 1);
     semctl(id_semaforo, RANA_MADRE_4, SETVAL, 1);
-
+    fprintf(stdout, "Se han creado los semaforos que van a controlar las 4 ranas madre.\n"); 
 
     // Cramos semaforos para acceder a memoria compartida
     semctl(id_semaforo, SEMAF_RANITAS_NACIDAS, SETVAL, 1);
     semctl(id_semaforo, SEMAF_RANITAS_SALVADAS, SETVAL, 1);
     semctl(id_semaforo, SEMAF_RANITAS_MUERTAS, SETVAL, 1);
     semctl(id_semaforo, SEMAF_POSICIONES, SETVAL, 1);
-
+    fprintf(stdout, "Se han creado los semaforos que van a controlar los accesos a memoria compartida\n"); 
+    
     // Vamos a crear la memoria compartida
     // Los primeros 2048 bytes estan reservados para la biblioteca.
     // Guardamos 
-    idMemoria=shmget(IPC_PRIVATE, 2048+sizeof(int) ,IPC_CREAT | IPC_EXCL | 0600);
+    id_memoria=shmget(IPC_PRIVATE, 2048+sizeof(int) ,IPC_CREAT | IPC_EXCL | 0600);
 
+    //se crea la memoria compartida para las posiciones
+	id_posiciones=shmget(IPC_PRIVATE, 33*sizeof(struct posicion_struct),IPC_CREAT | IPC_EXCL | 0600);
+
+    
     //enganchamos el proceso a los segmentos de memoria
-	memoria = (char *)shmat( idMemoria, NULL, 0);
-	posiciones =(struct posicion *) shmat(idposiciones, NULL, 0);
+	memoria = (char *)shmat( id_memoria, NULL, 0);
+    
+	posiciones =(struct posicion_struct *) shmat(id_posiciones, NULL, 0);
 
     //Guardamos la direccion de memoria en la var finalizar. Donde acaba la memoria de la biblioteca.
-	//finalizar=&memoria[2048];
+	finalizar=&memoria[2048];
 
-    //se inicializa la variable compartida para finalizar a 0
-	*finalizar=0;
+    
 
+    
+    
     //Vamos a inicializar las posiciones a -3
 	for (i = 0; i <=29; ++i)
 	{
-		posiciones[i].x=-3;
-		posiciones[i].y=-3;
+		posiciones[i].x=0;
+		posiciones[i].y=0;
 	}
+    fprintf(stdout, "Se han inicializado las posiciones\n"); 
 
+    //se inicializa la variable compartida para finalizar a 0
+	*finalizar=0;
+    
+    
     //La memoria para las ranitas nacidas
 	semaforo_wait(id_semaforo,SEMAF_RANITAS_NACIDAS);  
 	posiciones[30].x=0;
 	sem_signal(id_semaforo,SEMAF_RANITAS_NACIDAS);
+    fprintf(stdout, "Mem. para las ranas nacidas\n"); 
 
     //memoria para las ranitas salvadas
 	semaforo_wait(id_semaforo,SEMAF_RANITAS_SALVADAS);
 	posiciones[31].x=0;
 	sem_signal(id_semaforo,SEMAF_RANITAS_SALVADAS);
+    fprintf(stdout, "Mem. para las ranas salvadas\n");
 
 	//memoria para las ranitas perdidas
 	semaforo_wait(id_semaforo,SEMAF_RANITAS_MUERTAS);
 	posiciones[32].x=0;
 	sem_signal(id_semaforo,SEMAF_RANITAS_MUERTAS);
+    fprintf(stdout, "Mem. para las ranas perdidas\n");
+    
+    
+
+
 
 	//-------------------------------------------------------------------------------------
 	//registrar SIGINT para acabar correctamente
@@ -291,10 +332,29 @@ int main (int argc, char *argv[]){
   	    return 1;
     }
 
+    fprintf(stdout, "------------------------------------------------------\n"); 
+
+    // Dormimos el programa 5 segundos para que el usuario pueda leer los datos mostrados por pantalla
+    //sleep(5);
+    for(i=6;i>0;i--){
+        fprintf(stdout, "Continuara en... %d\n", i); 
+        sleep(1);
+    }
+
+    // -------------------------------------------------------------------------------------------------------------
+    // -------------------------------------------------------------------------------------------------------------
+    // -----------------------------------------   A POR LAS RANAS!!!   --------------------------------------------
+    // -------------------------------------------------------------------------------------------------------------
+    // -------------------------------------------------------------------------------------------------------------
+    // -------------------------------------------------------------------------------------------------------------
+
 
     // COMENZAMOS!
     // Le vamos a pasar a la funcion todos los parametros para que comience.
     BATR_inicio(tics, id_semaforo, lTroncos, lAguas, direcciones, ms, memoria);
+
+    // Creamos los procesos de las ranas madre, las que generan las ranitas
+    
 
 
 
