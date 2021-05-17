@@ -48,13 +48,14 @@
 #define MAX_TOTAL_PROCESOS 35		// El total de procesos permitidos
 #define MAX_RANAS_MADRE 4			// El numero de ranas madre
 #define MAX_RANAS_HIJAS 30			// El numero max de ranitas
+
 // DEFINICIONES DE SEMAFOROS
 #define MAIN_PANTALLA 1				// Semaf de la pantalla principal
 #define RANA_MADRE_1 2				// De la primera rana madre
-#define RANA_MADRE_2 3				// De la segunda
-#define RANA_MADRE_3 4				// De la tercera
-#define RANA_MADRE_4 5				// De la cuarta
-#define SEMAF_RANITAS_NACIDAS 6		//	Semaforo que controla las ranas nacidas
+#define RANA_MADRE_2 3				// De la segunda rana madre
+#define RANA_MADRE_3 4				// De la tercera rana madre
+#define RANA_MADRE_4 5				// De la cuarta rana madre
+#define SEMAF_RANITAS_NACIDAS 6		// Semaforo que controla las ranas nacidas
 #define SEMAF_RANITAS_SALVADAS 7	// Ranas salvadas
 #define SEMAF_RANITAS_MUERTAS 8		// Ranas perdidas
 #define SEMAF_POSICIONES 9
@@ -64,7 +65,7 @@
 #define RANA_CRUZADA 11				// Para comprobar si la rana ha cruzado
 
 //----------------------------------------------------------------------------------------
-//Prototipos de las funciones de la biblioteca
+//Prototipos de las funciones de la biblioteca a modo de lista 
 
 int BATR_pausa(void);
 int BATR_pausita(void);
@@ -96,9 +97,6 @@ int semaforo_signal( int semid, int indice);
     char *memoria;                  		//puntero a memoria compartida para la biblioteca
     char *finalizar;                		//puntero a memoria compartida para la variable finalizar
     struct posicion_struct *posiciones;    	//puntero a memoria compartida para las posiciones
-
-    
-
 
 
 // -------------------------------------------------------------------------------------------------------
@@ -152,16 +150,16 @@ void acabar(int s){
 
 
 // -------------------------------------------------------------------------------------------------------
-// Funcion SEMAFORO_WAIT
+// Funcion SEMAFORO_WAIT	(Funciona, reutilizadas)
 // Se le tiene que pasar el id del semaforo y un indice 
 // -----------------------------------
 int semaforo_wait( int semaforo_id, int indice){
 	/// Estructura
 	struct sembuf oper;
 
-	oper.sem_num=indice; 	//Sera sobre el semaforo indicado como semaforo id
-	oper.sem_op= -1; 		//Hacemos un wait
-	oper.sem_flg=0; 
+	oper.sem_num = indice; 	//Sera sobre el semaforo indicado como semaforo id
+	oper.sem_op = -1;
+	oper.sem_flg = 0; 
 
 	return semop(semaforo_id, &oper, 1); //Realizamos la operacion 
 }
@@ -169,7 +167,7 @@ int semaforo_wait( int semaforo_id, int indice){
 
 
 // -------------------------------------------------------------------------------------------------------
-// Funcion SEMAFORO_WAIT
+// Funcion SEMAFORO_WAIT	(Funciona, reutilizadas)
 // Se le tiene que pasar el id del semaforo y un indice 
 // -----------------------------------
 int semaforo_signal( int semaforo_id, int indice){
@@ -194,7 +192,8 @@ int semaforo_signal( int semaforo_id, int indice){
 // -----------------------------------
 int ranita(int pos, int i){
 
-    //Se realiza el primer salto hacia delante fuera del bucle porque tiene que hacer un signal diciendo que se ha quedado libre la primera posicioón
+	//HAcemos un primer salto hacia adelante siempre, fuera del bucle
+	// 
 	while(BATR_puedo_saltar(posiciones[pos].x,posiciones[pos].y,ARRIBA)!=0 && !*finalizar);
 
     // Comprobamos si se puede saltar hacia arriba y si es 0 significa que si.
@@ -213,9 +212,6 @@ int ranita(int pos, int i){
 	// Hacemos un signal al sem de la primera posicion de la rana madre que corresponde
 	semaforo_signal(id_semaforo,(i+2));
 
-
-
-
 	//Bucle en el que se avanza constantemete hacia delante mientras finalizar no sea falso
 	while(!*finalizar){
 
@@ -230,7 +226,7 @@ int ranita(int pos, int i){
 		
 			//si ha sido salvada se dejan libres la posicion y el hueco en pantalla y acaba
 			semaforo_wait(id_semaforo, SEMAF_RANITAS_SALVADAS);
-			posiciones[31].x++;
+			posiciones[31].x++;	//Incrementamos
 			semaforo_signal(id_semaforo,SEMAF_RANITAS_SALVADAS);
 
 			posiciones[pos].x=-2;
@@ -241,10 +237,12 @@ int ranita(int pos, int i){
 			semaforo_signal(id_semaforo, SEMAF_POSICIONES);
 
 			return 0;
-		}
+		}// END IF
+
 		else if ( (posiciones[pos].x<=-1 && posiciones[pos].y!=-2) || posiciones[pos].x>=80) {
-			//después se comprueba si no se ha perdido por alguno de los lados
-			//si se ha perdido se dejan libres la posicion y el hueco en pantalla y acaba
+			//Comprobamos si no se ha salido alguna rana por un lado
+			// En el caso de perder alguna, dejamos libre dicha posicion y hueco 
+			
 			semaforo_wait(id_semaforo, SEMAF_RANITAS_MUERTAS);
 			posiciones[32].x++;
 			semaforo_signal(id_semaforo,SEMAF_RANITAS_MUERTAS);
@@ -257,9 +255,9 @@ int ranita(int pos, int i){
 			semaforo_signal(id_semaforo, SEMAF_POSICIONES);
 
 			return 0;
-		}
-		else if (BATR_puedo_saltar(posiciones[pos].x,posiciones[pos].y,ARRIBA)==0)
-		{
+		}// END ELSEIF
+
+		else if (BATR_puedo_saltar(posiciones[pos].x,posiciones[pos].y,ARRIBA)==0){
 			//si no ha acabado por arriba o por los lados intenta avanzar avanzar
 
 			/*
@@ -296,9 +294,9 @@ int ranita(int pos, int i){
 int codigo_rana_madre(int i){
 
 	int x,y;        //coordenadas iniciales de las ranitas creadas
-	int posicion;   //
-	int j,k;        //contador parael bucle
-    pid_t id_ranita; //variable para el fork
+	int posicion;   //Una de las 30 posiciones duspoibles para las ranitas 
+	int j,k;        //contadores parael bucle
+    pid_t id_ranita; //variable para el fork, el id de cada ranita
 
 	while(!*finalizar){  // Bucle infinito
 		//Esperamos a que haya "hueco" para un nuevo proceso (ranita)
@@ -307,13 +305,10 @@ int codigo_rana_madre(int i){
             continue;
         }
 		
-
 		//se hace un wait al semaforo que indica si la rana anterior ya se ha movido de la posicion inicial
 		if (semaforo_signal(id_semaforo,(i+2))==-1){
             return 0;
         }
-
-
 
 		//WAIT AL SEMAFORO DE POSICIONES
 		if (semaforo_signal(id_semaforo, SEMAF_POSICIONES)==-1){
@@ -339,7 +334,7 @@ int codigo_rana_madre(int i){
 
 		//Incrementamos el contador de ranas nacidas
 		semaforo_signal(id_semaforo,SEMAF_RANITAS_NACIDAS);
-		posiciones[30].x++;
+		posiciones[30].x++;		// Incrementamos
 		semaforo_signal(id_semaforo,SEMAF_RANITAS_NACIDAS);
 
 
@@ -356,7 +351,6 @@ int codigo_rana_madre(int i){
                 //
 				return ranita(posicion,i);
 		}
-		//cuando se reciba el aviso de acabar del padre, esperar a que acaben las ranitas
 
 		//Hacemos descanasr las ranas madre
 		BATR_descansar_criar();
@@ -478,11 +472,11 @@ int main (int argc, char *argv[]){
 
     
     
-    //Vamos a inicializar las posiciones a -3
+    //Vamos a inicializar las posiciones a -2
 	for (i = 0; i <=29; ++i)
 	{
-		posiciones[i].x=0;
-		posiciones[i].y=0;
+		posiciones[i].x=-2;
+		posiciones[i].y=-2;
 	}
     fprintf(stdout, "Se han inicializado las posiciones\n"); 
 
@@ -515,8 +509,8 @@ int main (int argc, char *argv[]){
 	//-------------------------------------------------------------------------------------
 	//registrar SIGINT para acabar correctamente
 	struct sigaction ss;
-  	ss.sa_handler=acabar; 
-  	ss.sa_flags=0;
+  	ss.sa_handler = acabar; 
+  	ss.sa_flags = 0;
   	sigfillset(&ss.sa_mask);
   	if (sigaction(SIGINT, &ss, NULL) ==-1){
   	    return 1;
@@ -562,7 +556,9 @@ int main (int argc, char *argv[]){
     // finalizar sea falsa
     while (!*finalizar){
         /* code */
-        if (semaforo_signal(id_semaforo, SEMAF_POSICIONES)==-1) continue;
+        if (semaforo_signal(id_semaforo, SEMAF_POSICIONES) ==-1){
+			continue;
+		}
 
 		// Vamos a recorrer las filas de troncos
 		for (i = 4; i <= 10; i++)
@@ -572,33 +568,59 @@ int main (int argc, char *argv[]){
 			for (j = 0; j <= 29; j++)
 			{
 				//si la coordenada y de la posicion es la del tronco que se va a mover, se cambia
-				if (posiciones[j].y==i)
-				{
-					if (direcciones[i-4]==DERECHA)
-					{
+				if (posiciones[j].y==i){
+					if (direcciones[i-4]==DERECHA){
 						(posiciones[j].x)=posiciones[j].x+1;
 					}
-					else
-					{
+					else{
 						(posiciones[j].x)=posiciones[j].x-1;
-
 					}
 				}
 			}
 
 			BATR_avance_troncos(i-4);
+			// Realizamos una pausita
 			BATR_pausita();
 
 		}
-
-
 		semaforo_signal(id_semaforo, SEMAF_POSICIONES);
-
-
     }// FIN WHILE
+
+
+	// PARA FINALIZAR TRAS RECIBIR EL SIGINT CTL C
+
+	// Esperemos a que acaben las ranas madre
+
+	pid_t id_proceso;
+	int estado;
+	// Con un buble FOR recorremos todas las ranas madre
+	for(i=0; i<3; i++){
+		id_proceso = waitpid(pids_ranas_madre[i], &estado, 0);
+		if(id_proceso == -1){
+			// En el caso de que haya un error mostramos el error
+			perror("ERROR: Wait");
+			return 1;
+		}
+	}
     
+	// Vamos a realizar la comprobacion de que las ranas nacidas tiene que ser igual de ranas salvadas mas el de ranas muertas
+	BATR_comprobar_estadIsticas(posiciones[30].x, posiciones[31].x, posiciones[32].x);
+
+	// Vamos a mandar la orden con la funcion de biblioteca de que finalice:
+	BATR_fin();
 
 
+
+
+	// Procedemos a limpiar semaforos y memoria compartida.
+	//Mem
+	shmctl(id_memoria, IPC_RMID, NULL);
+	//Semaf
+	semctl(id_semaforo, 0, IPC_RMID);
+
+
+	// Ya hemos limpiado todo y por lo tanto ya podemos retrnar para que acabe el proceso padre
+	return 0;
 
 }
 // FIN MAIN------------------------------------------------------------------------------------------------------
