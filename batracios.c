@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <time.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
@@ -63,13 +64,16 @@
 #define IZQUIERDA 1
 #define ARRIBA 2
 #define RANA_CRUZADA 11				// Para comprobar si la rana ha cruzado
+// Para generar el agua y los troncos, los valores min y max
+#define RANDOM_MAX 12
+#define RANDOM_MIN 1
 
 //----------------------------------------------------------------------------------------
 //Prototipos de las funciones de la biblioteca a modo de lista 
 
 int BATR_pausa(void);
 int BATR_pausita(void);
-int BATR_inicio(int ret,int semAforos, int lTroncos[],int lAguas[],int dirs[],int tCriar,char *zona);
+int BATR_inicio(int ret,int semAforos, int long_troncos[],int long_agua[],int dirs[],int tCriar,char *zona);
 int BATR_avance_troncos(int fila);
 void BATR_descansar_criar(void);
 int BATR_parto_ranas(int i,int *dx,int *dy);
@@ -300,18 +304,18 @@ int codigo_rana_madre(int i){
 
 	while(!*finalizar){  // Bucle infinito
 		//Esperamos a que haya "hueco" para un nuevo proceso (ranita)
-		if (semaforo_signal(id_semaforo,MAIN_PANTALLA)==-1){
+		if (semaforo_wait(id_semaforo,MAIN_PANTALLA)==-1){
             // Si hay hueco entonces continuamos
             continue;
         }
 		
 		//se hace un wait al semaforo que indica si la rana anterior ya se ha movido de la posicion inicial
-		if (semaforo_signal(id_semaforo,(i+2))==-1){
+		if (semaforo_wait(id_semaforo,(i+2))==-1){
             return 0;
         }
 
 		//WAIT AL SEMAFORO DE POSICIONES
-		if (semaforo_signal(id_semaforo, SEMAF_POSICIONES)==-1){
+		if (semaforo_wait(id_semaforo, SEMAF_POSICIONES)==-1){
 			continue;
 		}
 
@@ -333,7 +337,7 @@ int codigo_rana_madre(int i){
 		semaforo_signal(id_semaforo, SEMAF_POSICIONES);
 
 		//Incrementamos el contador de ranas nacidas
-		semaforo_signal(id_semaforo,SEMAF_RANITAS_NACIDAS);
+		semaforo_wait(id_semaforo,SEMAF_RANITAS_NACIDAS);
 		posiciones[30].x++;		// Incrementamos
 		semaforo_signal(id_semaforo,SEMAF_RANITAS_NACIDAS);
 
@@ -363,6 +367,32 @@ int codigo_rana_madre(int i){
 
 
 
+
+// ------------------------------------------------------------------------------------------------------
+// Funcion genera_aleatorio
+// Genera los elementos de un string de forma aleatoria
+// -----------------------------------
+
+void genera_aleatorio(int *vector,int num){
+	int i;
+
+	if(num>1){
+		//Recorremos todo el vector
+		for(i=0; i<num;i++){
+			//E introducimos los nums aleatorios
+			vector[i] = rand() % (RANDOM_MAX + 1 - RANDOM_MIN) + RANDOM_MIN;
+		}
+		//RANDOM_MAX 
+		//RANDOM_MIN
+		//rand() % (max_number + 1 - minimum_number) + minimum_number
+
+	}
+	
+	
+}
+// ------------------------------------------------------------------------------------------------------
+
+
 // ------------------------------------------------------------------------------------------------------
 // Funcion MAIN
 // Hace las llamadas principales
@@ -373,12 +403,16 @@ int main (int argc, char *argv[]){
     int ms, tics;       // ms y tics que se pasan por parametro
     int id_posiciones;   //id de la memoria compartida de las posiciones
     int i, j, k;        // Contadores para bucles
-    int lTroncos[7]={2,3,4,5,6,2,2};    //Longitudes medias de los troncos de cada fila. Se pueden generar aleatoriamente.
-	int lAguas[7]={5,9,11,2,6,7,8};     //Longitudes medias de los espacios entre troncos de cada fila. Se pueden generar aleatoriamente.
+    int long_troncos[7];    //Longitudes medias de los troncos de cada fila. Se pueden generar aleatoriamente.
+	int long_agua[7];     //Longitudes medias de los espacios entre troncos de cada fila. Se pueden generar aleatoriamente.
 	int direcciones[7]={1,0,1,0,1,0,1}; //Sentido en el que se mueven los troncos por la pantalla. DERECHA(0) o IZQUIERDA(1)
+	int valor_devuelto;
 
     pid_t pids_ranas_madre[4]; //guarda los pids de las ranas madre
-    
+
+	srand(time(NULL));   // Initialization, should only be called once.
+	genera_aleatorio(&long_troncos[0],7);
+	genera_aleatorio(&long_agua[0],7);
 
     // Llamamos a la presentacion del programa
     presentacion();
@@ -433,8 +467,8 @@ int main (int argc, char *argv[]){
     id_semaforo = semget(IPC_PRIVATE, 10, IPC_CREAT | 0600);     // IPC_PRIVATE porque solo va a ser usado por el proceso y sus descendientes - 10 el num de semaforos
     fprintf(stdout, "Se ha creado el semaforo. Tiene una ID = %d\n", id_semaforo); 
 
-    // Semaforo para el numero max de ranas hijas (MAX_RANAS_HIJAS)
-    semctl(id_semaforo, MAIN_PANTALLA, SETVAL, 30);
+    // Semaforo para el numero max de ranas hijas (MAX_RANAS_HIJAS, 30)
+    semctl(id_semaforo, MAIN_PANTALLA, SETVAL, MAX_RANAS_HIJAS);
 
     // Vamos a crear los semaforos que controlan las 4 ranas madre, que van a generar las ranitas
     // Uno para cada rana madre.
@@ -459,7 +493,6 @@ int main (int argc, char *argv[]){
     //se crea la memoria compartida para las posiciones
 	id_posiciones=shmget(IPC_PRIVATE, 33*sizeof(struct posicion_struct),IPC_CREAT | IPC_EXCL | 0600);
 
-    
     //enganchamos el proceso a los segmentos de memoria
 	memoria = (char *)shmat( id_memoria, NULL, 0);
     
@@ -468,16 +501,12 @@ int main (int argc, char *argv[]){
     //Guardamos la direccion de memoria en la var finalizar. Donde acaba la memoria de la biblioteca.
 	finalizar=&memoria[2048];
 
-    
-
-    
-    
     //Vamos a inicializar las posiciones a -2
-	for (i = 0; i <=29; ++i)
-	{
+	for (i = 0; i <=29; ++i){
 		posiciones[i].x=-2;
 		posiciones[i].y=-2;
 	}
+
     fprintf(stdout, "Se han inicializado las posiciones\n"); 
 
     //se inicializa la variable compartida para finalizar a 0
@@ -513,17 +542,38 @@ int main (int argc, char *argv[]){
   	ss.sa_flags = 0;
   	sigfillset(&ss.sa_mask);
   	if (sigaction(SIGINT, &ss, NULL) ==-1){
+		perror("ERROR sigint");
   	    return 1;
     }
 
     fprintf(stdout, "------------------------------------------------------\n"); 
 
+	// Creamos un proceso hijo, para dormirlo 5 segundos y esperar por 'el
+	valor_devuelto = fork();	// Creamos el hijo
+	switch (valor_devuelto) {
+	
+	case 0: //Codigo del hijo...
+		
+		for(i=6;i>0;i--){
+        	fprintf(stdout, "Continuara en... %d\n", i); 
+        	sleep(1);
+    	}
+		return 1;
+	
+	break;
+	default: //Codigo del padre...
+		waitpid( -1, &valor_devuelto, 0);
+		fprintf(stdout, "Se comienza\n");
+		sleep(1);
+	}//switch
+
+
     // Dormimos el programa 5 segundos para que el usuario pueda leer los datos mostrados por pantalla
     //sleep(5);
-    for(i=6;i>0;i--){
-        fprintf(stdout, "Continuara en... %d\n", i); 
-        sleep(1);
-    }
+    //for(i=6;i>0;i--){
+    //    fprintf(stdout, "Continuara en... %d\n", i); 
+    //    sleep(1);
+    //}
 
     // -------------------------------------------------------------------------------------------------------------
     // -------------------------------------------------------------------------------------------------------------
@@ -535,7 +585,7 @@ int main (int argc, char *argv[]){
 
     // COMENZAMOS!
     // Le vamos a pasar a la funcion todos los parametros para que comience.
-    BATR_inicio(tics, id_semaforo, lTroncos, lAguas, direcciones, ms, memoria);
+    BATR_inicio(tics, id_semaforo, long_troncos, long_agua, direcciones, ms, memoria);
 
     // Creamos los procesos de las ranas madre, las que generan las ranitas
     // Con un for de 0 a 3 creamos los 4 procesos hijo
@@ -556,9 +606,8 @@ int main (int argc, char *argv[]){
     // finalizar sea falsa
     while (!*finalizar){
         /* code */
-        if (semaforo_signal(id_semaforo, SEMAF_POSICIONES) ==-1){
-			continue;
-		}
+        if (semaforo_wait(id_semaforo, SEMAF_POSICIONES) ==-1) continue;
+		
 
 		// Vamos a recorrer las filas de troncos
 		for (i = 4; i <= 10; i++)
@@ -588,7 +637,6 @@ int main (int argc, char *argv[]){
 
 
 	// PARA FINALIZAR TRAS RECIBIR EL SIGINT CTL C
-
 	// Esperemos a que acaben las ranas madre
 
 	pid_t id_proceso;
