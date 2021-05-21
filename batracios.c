@@ -24,8 +24,12 @@
     5 - Si la fase anterior no dio ningún error y os generó el ejecutable, probad a ejecutarlo. Si todo ha ido bien, debería ejecutarse sin problemas.
 */
 
-// Para ejecutarlo: 
-//            gcc batracios.c libbatracios.a -lm -m32 -o batracios  
+// Para compilarlo: 
+//          gcc batracios.c libbatracios.a -lm -m32 -o batracios  
+// Para ejecutarlo:
+//			./batracios 0
+//			./batracios 0 1
+//			./batracios 5
 
 
 // -------------------------------------------------------------------------------------------------------
@@ -42,6 +46,7 @@
 #include <sys/sem.h>
 #include <sys/shm.h>
 #include <sys/types.h>
+#include <ctype.h>
 
 // -------------------------------------------------------------------------------------------------------
 // DEFINICIONES USADAS
@@ -396,6 +401,8 @@ void genera_aleatorio(int *vector,int num){
 // ------------------------------------------------------------------------------------------------------
 // Funcion MAIN
 // Hace las llamadas principales
+// Recibe los parametros de lanzamiento a traves de argc y argv
+// ARGC es el numero de parametros y ARGV es un puntero a char con los elementos
 // -----------------------------------
 int main (int argc, char *argv[]){
 
@@ -405,14 +412,15 @@ int main (int argc, char *argv[]){
     int i, j, k;        // Contadores para bucles
     int long_troncos[7];    //Longitudes medias de los troncos de cada fila. Se pueden generar aleatoriamente.
 	int long_agua[7];     //Longitudes medias de los espacios entre troncos de cada fila. Se pueden generar aleatoriamente.
-	int direcciones[7]={1,0,1,0,1,0,1}; //Sentido en el que se mueven los troncos por la pantalla. DERECHA(0) o IZQUIERDA(1)
-	int valor_devuelto;
+	int sentidos_troncos[7]={1,0,1,0,1,0,1}; //Sentido en el que se mueven los troncos por la pantalla. DERECHA(0) o IZQUIERDA(1)
+	int valor_devuelto;	// De la creacion de hijo de espera
+	char parametro;
 
     pid_t pids_ranas_madre[4]; //guarda los pids de las ranas madre
 
-	srand(time(NULL));   // Initialization, should only be called once.
-	genera_aleatorio(&long_troncos[0],7);
-	genera_aleatorio(&long_agua[0],7);
+	srand(time(NULL));   // Para generar numeros aleatorios.
+	genera_aleatorio(&long_troncos[0],7);	// Genera las longitudes de los troncos
+	genera_aleatorio(&long_agua[0],7);		// Genera las longitudes del agua
 
     // Llamamos a la presentacion del programa
     presentacion();
@@ -425,9 +433,13 @@ int main (int argc, char *argv[]){
     }
 
     // Realizamos el control de los parametros introducidos
-    // Guardamos el primer parametro en la variable ms (milisegundos)
+
+	
+	// Guardamos el primer parametro en la variable ms (milisegundos)
     ms=atoi(argv[1]);       // ms de "descanso"
-    
+	
+	
+
 
     if((ms >1000) || (ms <0)){
         //Si el primer parametro esta fuera del rango
@@ -454,9 +466,9 @@ int main (int argc, char *argv[]){
     }
 
     // Mostramos los datos obtenidos al usuario
-    fprintf(stdout, "\nLos datos introducidos son:\n");
-    fprintf(stdout, "MS: %d\n", ms);
-    fprintf(stdout, "TICS: %d\n", tics);    
+    fprintf(stdout, "\n Los datos introducidos son:\n");
+    fprintf(stdout, " MS: %d\n", ms);
+    fprintf(stdout, " TICS: %d\n", tics);    
     fprintf(stdout, "\n");
 
 
@@ -585,7 +597,8 @@ int main (int argc, char *argv[]){
 
     // COMENZAMOS!
     // Le vamos a pasar a la funcion todos los parametros para que comience.
-    BATR_inicio(tics, id_semaforo, long_troncos, long_agua, direcciones, ms, memoria);
+	// Los tics introducidos, el id del semaforo que hemos creado, las longitudes generadas aleatoriamente, las sentidos_troncos, los ms y la memoria compartida
+    BATR_inicio(tics, id_semaforo, long_troncos, long_agua, sentidos_troncos, ms, memoria);
 
     // Creamos los procesos de las ranas madre, las que generan las ranitas
     // Con un for de 0 a 3 creamos los 4 procesos hijo
@@ -618,7 +631,7 @@ int main (int argc, char *argv[]){
 			{
 				//si la coordenada y de la posicion es la del tronco que se va a mover, se cambia
 				if (posiciones[j].y==i){
-					if (direcciones[i-4]==DERECHA){
+					if (sentidos_troncos[i-4]==DERECHA){
 						(posiciones[j].x)=posiciones[j].x+1;
 					}
 					else{
@@ -643,7 +656,9 @@ int main (int argc, char *argv[]){
 	int estado;
 	// Con un buble FOR recorremos todas las ranas madre
 	for(i=0; i<3; i++){
+		// Hacemos un wait a cada proceso rana madre
 		id_proceso = waitpid(pids_ranas_madre[i], &estado, 0);
+		// Vemos que ha devuelto cada wait
 		if(id_proceso == -1){
 			// En el caso de que haya un error mostramos el error
 			perror("ERROR: Wait");
