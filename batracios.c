@@ -72,10 +72,11 @@
 // Para generar el agua y los troncos, los valores min y max
 #define RANDOM_MAX 12
 #define RANDOM_MIN 1
+#define FIN_FALLO 1     // Lo que retornamos si hay fallo
+#define FIN_EXITO 0     // Si no hay fallo
 
 //----------------------------------------------------------------------------------------
 //Prototipos de las funciones de la biblioteca a modo de lista 
-
 int BATR_pausa(void);
 int BATR_pausita(void);
 int BATR_inicio(int ret,int semAforos, int long_troncos[],int long_agua[],int dirs[],int tCriar,char *zona);
@@ -99,7 +100,6 @@ int semaforo_signal( int semid, int indice);
 // -------------------------------------------------------------------------------------------------------
 // Estructura para las posiciones, con un X e Y
     struct posicion_struct {int x,y;};
-
 
 // VARIABLES GLOBALES USADAS
     int id_semaforo,id_memoria;       		//id de los semaforos y memoria
@@ -128,7 +128,7 @@ void presentacion(){
     fprintf(stderr,"\n");
     fprintf(stderr,"\n");
 }
-// FIN PRESENTACION -------------------------------------------------------------------------------------------------------
+// FIN PRESENTACION --------------------------------------------------------------------------------------
 
 
 // -------------------------------------------------------------------------------------------------------
@@ -399,6 +399,78 @@ void genera_aleatorio(int *vector,int num){
 
 
 // ------------------------------------------------------------------------------------------------------
+// Funciones manejarores y misleep reutilizadas de la practica 1 de la Sesion 4
+
+void manejadora()
+{
+}
+
+
+// Funcion misleep
+int misleep(int espera)
+{
+	int i;
+	sigset_t mascaranueva,mascaravieja;
+	struct sigaction accionNueva, acccionVieja;
+
+	if(sigfillset(&mascaranueva)==-1)
+	{
+		perror("Fallo sigfillset");
+		return FIN_FALLO;
+	}
+
+	accionNueva.sa_handler=manejadora;
+	accionNueva.sa_mask=mascaranueva;
+	accionNueva.sa_flags =0;
+
+	if(sigaction(SIGALRM, &accionNueva, &acccionVieja)==-1)
+	{
+		perror("Fallo sigaction, accionNueva");
+		return FIN_FALLO;
+	}
+
+
+	if(sigprocmask(SIG_SETMASK,&mascaranueva,&mascaravieja)==-1)
+	{
+		perror("Fallo sigprocmask, mascaranueva");
+		return FIN_FALLO;
+	}
+
+	if(sigdelset(&mascaranueva,SIGALRM)==-1)
+	{
+		perror("Fallo sigdelset");
+		return FIN_FALLO;
+	}
+
+	for(i=espera;i>=0;i--)
+	{
+		printf("%d ",i);
+		alarm(1);
+		sigsuspend(&mascaranueva);
+	}
+    printf("\n--------------\n");
+	
+
+	if(sigaction(SIGALRM, &acccionVieja, NULL)==-1)
+	{
+		perror("Fallo sigaction, acccionVieja ");
+		return FIN_FALLO;
+	}
+
+	if(sigprocmask(SIG_SETMASK,&mascaravieja,NULL)==-1)
+	{
+		perror("Fallo sigprocmask, mascaravieja");
+		return FIN_FALLO;
+	}	
+	return FIN_EXITO;
+}
+
+
+
+// ------------------------------------------------------------------------------------------------------
+
+
+// ------------------------------------------------------------------------------------------------------
 // Funcion MAIN
 // Hace las llamadas principales
 // Recibe los parametros de lanzamiento a traves de argc y argv
@@ -559,7 +631,10 @@ int main (int argc, char *argv[]){
     }
 
     fprintf(stdout, "------------------------------------------------------\n"); 
+	fprintf(stdout, "El programa continuara en 7 segundos.\n"); 
+	misleep(7);
 
+	/*
 	// Creamos un proceso hijo, para dormirlo 5 segundos y esperar por 'el
 	valor_devuelto = fork();	// Creamos el hijo
 	switch (valor_devuelto) {
@@ -578,7 +653,7 @@ int main (int argc, char *argv[]){
 		fprintf(stdout, "Se comienza\n");
 		sleep(1);
 	}//switch
-
+	*/
 
     // Dormimos el programa 5 segundos para que el usuario pueda leer los datos mostrados por pantalla
     //sleep(5);
