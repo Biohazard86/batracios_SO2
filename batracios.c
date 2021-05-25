@@ -98,14 +98,14 @@ int semaforo_signal( int semid, int indice);
 
 
 // -------------------------------------------------------------------------------------------------------
-// Estructura para las posiciones, con un X e Y
+// Estructura para las posiciones, con una X e Y 
     struct posicion_struct {int x,y;};
 
 // VARIABLES GLOBALES USADAS
     int id_semaforo,id_memoria;       		//id de los semaforos y memoria
     char *memoria;                  		//puntero a memoria compartida para la biblioteca
     char *finalizar;                		//puntero a memoria compartida para la variable finalizar
-    struct posicion_struct *posiciones;    	//puntero a memoria compartida para las posiciones
+    struct posicion_struct *posiciones;    	//Almacenamos las posiciones de las ranitas aqui
 
 
 // -------------------------------------------------------------------------------------------------------
@@ -479,7 +479,7 @@ int misleep(int espera)
 int main (int argc, char *argv[]){
 
     // Variables de la funcion MAIN:
-    int ms, tics;       // ms y tics que se pasan por parametro
+    int ms, tics, contador_explotadas;       // ms y tics que se pasan por parametro
     int id_posiciones;   //id de la memoria compartida de las posiciones
     int i, j, k;        // Contadores para bucles
     int long_troncos[7];    //Longitudes medias de los troncos de cada fila. Se pueden generar aleatoriamente.
@@ -740,9 +740,35 @@ int main (int argc, char *argv[]){
 			return 1;
 		}
 	}
-    
+
+
+	sleep(1);
+
+	// explotamos las ranas que hayan quedado dentro de los troncos para que se pierdan y las cuentas salgan
+	/*
+	for(i=0;i<30;i++){
+		if((posiciones[i].x > -1) && (posiciones[i].y > -1)){
+
+			BATR_explotar( posiciones[i].x,posiciones[i].y);
+			posiciones[32].x++;
+				
+			
+		
+		}
+		
+	}
+	
+
+    sleep(1);
+
+	*/
+
+
 	// Vamos a realizar la comprobacion de que las ranas nacidas tiene que ser igual de ranas salvadas mas el de ranas muertas
-	BATR_comprobar_estadIsticas(posiciones[30].x, posiciones[31].x, posiciones[32].x);
+
+	//printf("\n\t%d - %d - %d\n", posiciones[30].x, posiciones[31].x, posiciones[32].x);
+	
+	BATR_comprobar_estadIsticas(posiciones[30].x, posiciones[31].x, posiciones[32].x );
 
 	// Vamos a mandar la orden con la funcion de biblioteca de que finalice:
 	BATR_fin();
