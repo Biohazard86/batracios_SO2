@@ -309,7 +309,7 @@ int ranita(int pos, int i){
 
 
 	// Si hemos presionado CTL+C global_control estara a 0
-	if(global_control == 0){
+	if((global_control == 0) && (posiciones[pos].y > -1) && (posiciones[pos].y < 11) && (posiciones[pos].x < 80) && (posiciones[pos].x > 0)){
 		// Entonces vamos a explotar esta rana, ya que si no se ha salido por un lado o
 		// llegado arriba, eso significa que a'un esta atrapada en los troncos, debe ser explotada
 		BATR_explotar(posiciones[pos].x,posiciones[pos].y);
@@ -370,22 +370,25 @@ int codigo_rana_madre(int i){
 			}
 		}
 
-
-		//Se llama a la funcion para crear ranitas
-		BATR_parto_ranas(i, &posiciones[posicion].x,&posiciones[posicion].y);
-
-		//SIGNAL AL SEMAFORO DE POSICIONES
-		semaforo_signal(id_semaforo, SEMAF_POSICIONES);
-
-		//Incrementamos el contador de ranas nacidas
-		semaforo_wait(id_semaforo,SEMAF_RANITAS_NACIDAS);
-		posiciones[30].x++;		// Incrementamos el contador de ranas nacidas
-		semaforo_signal(id_semaforo,SEMAF_RANITAS_NACIDAS);
-
-
-		//se crea un proceso para encargarse de la ranita a la cual se le indica la posicion y el numero de madre
 		if(global_control == 1){
+			//Se llama a la funcion para crear ranitas
+			BATR_parto_ranas(i, &posiciones[posicion].x,&posiciones[posicion].y);
+
+			//SIGNAL AL SEMAFORO DE POSICIONES
+			semaforo_signal(id_semaforo, SEMAF_POSICIONES);
+
+			//Incrementamos el contador de ranas nacidas
+			semaforo_wait(id_semaforo,SEMAF_RANITAS_NACIDAS);
+			posiciones[30].x++;		// Incrementamos el contador de ranas nacidas
+			semaforo_signal(id_semaforo,SEMAF_RANITAS_NACIDAS);
+
+
+			//se crea un proceso para encargarse de la ranita a la cual se le indica la posicion y el numero de madre
+			
 			id_ranita=fork();
+		}
+		else{
+			return 0;
 		}
 		
 		// Comprobamos si se ha creado
