@@ -297,6 +297,7 @@ int ranita(int pos, int i){
 		semaforo_signal(id_semaforo, SEMAF_POSICIONES);
 
 		/*
+		// No va aqui
 		if(global_control == 0){
 			BATR_explotar(posiciones[pos].x,posiciones[pos].y);
 			posiciones[32].x++;	// Aumentamos el contador de las ranas muertas
@@ -306,9 +307,15 @@ int ranita(int pos, int i){
 
 	}//FIN while
 
+
+	// Si hemos presionado CTL+C global_control estara a 0
 	if(global_control == 0){
+		// Entonces vamos a explotar esta rana, ya que si no se ha salido por un lado o
+		// llegado arriba, eso significa que a'un esta atrapada en los troncos, debe ser explotada
 		BATR_explotar(posiciones[pos].x,posiciones[pos].y);
+		//Incrementamos el contador de ranas muertas, ya que explotar una rana es lo que tiene, que muere... Al menos eso me han dicho.
 		posiciones[32].x++;	// Aumentamos el contador de las ranas muertas
+		// Retornamos un valor de 0 a la funcion llamante, ya que no queda nada m'as que hacer amigos.
 		return 0;
 	}
 
