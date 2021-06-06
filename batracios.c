@@ -26,7 +26,7 @@
 
 // Para compilarlo: 
 //          gcc batracios.c libbatracios.a -lm -m32 -o batracios  
-// Para ejecutarlo:
+// Para ejecutarlo, por ejemplo:
 //			./batracios 0
 //			./batracios 0 1
 //			./batracios 5
@@ -55,28 +55,31 @@
 #define MAX_RANAS_MADRE 4			// El numero de ranas madre
 #define MAX_RANAS_HIJAS 30			// El numero max de ranitas
 
-// DEFINICIONES DE SEMAFOROS
-#define MAIN_PANTALLA 1				// Semaf de la pantalla principal
+// DEFINICIONES DE SEMAFOROS, aquí sólo definimos el numero dentro del conjunto de semaforos que van a tomar
+#define MAIN_PANTALLA 1				// Semaf de la pantalla principal, controla las ranitas maximas que se pueden generar. En este caso el maimo es un total de MAX_RANAS_HIJAS (30 ranitas)
 #define RANA_MADRE_1 2				// De la primera rana madre
 #define RANA_MADRE_2 3				// De la segunda rana madre
 #define RANA_MADRE_3 4				// De la tercera rana madre
 #define RANA_MADRE_4 5				// De la cuarta rana madre
-#define SEMAF_RANITAS_NACIDAS 6		// Semaforo que controla las ranas nacidas
-#define SEMAF_RANITAS_SALVADAS 7	// Ranas salvadas
-#define SEMAF_RANITAS_MUERTAS 8		// Ranas perdidas
-#define SEMAF_POSICIONES 9
+#define SEMAF_RANITAS_NACIDAS 6		// Semaforo que controla el acceso a la memoria compartida donde vamosa a guardar las ranas nacidas
+#define SEMAF_RANITAS_SALVADAS 7	// idem para las ranas salvadas
+#define SEMAF_RANITAS_MUERTAS 8		// idem para las ranas perdidas
+#define SEMAF_POSICIONES 9			// Este sem va a controlar el acceso a las posiciones (mem. compartida)
+
+
+
+// Definiciones de constantes
 #define DERECHA 0					// Definimos derecha, izquierda y arriba. Para mover los troncos y las ranas
-#define IZQUIERDA 1
-#define ARRIBA 2
-#define RANA_CRUZADA 11				// Para comprobar si la rana ha cruzado
-// Para generar el agua y los troncos, los valores min y max
-#define RANDOM_MAX 12
-#define RANDOM_MIN 1
-#define FIN_FALLO 1     // Lo que retornamos si hay fallo
-#define FIN_EXITO 0     // Si no hay fallo
+#define IZQUIERDA 1					// Definimos derecha, izquierda y arriba. Para mover los troncos y las ranas
+#define ARRIBA 2					// Definimos derecha, izquierda y arriba. Para mover los troncos y las ranas
+#define RANA_CRUZADA 11				// Para comprobar si la rana ha cruzado, ha llegado a la posicion 11 de la pantalla
+#define RANDOM_MAX 12				// Para generar el agua y los troncos, los valores min y max
+#define RANDOM_MIN 1				// Para generar el agua y los troncos, los valores min y max
+#define FIN_FALLO 1    	 			// Lo que retornamos si hay fallo
+#define FIN_EXITO 0     			// Si no hay fallo
 
 //----------------------------------------------------------------------------------------
-//Prototipos de las funciones de la biblioteca a modo de lista 
+//Prototipos de las funciones de la biblioteca a modo de lista, en el PDF est'an todas descritas
 int BATR_pausa(void);
 int BATR_pausita(void);
 int BATR_inicio(int ret,int semAforos, int long_troncos[],int long_agua[],int dirs[],int tCriar,char *zona);
@@ -98,12 +101,12 @@ int semaforo_signal( int semid, int indice);
 
 
 // -------------------------------------------------------------------------------------------------------
-// Estructura para las posiciones, con una X e Y 
+// Estructura para las posiciones, con una X e Y, sirve para almacenar las posicinoes de cada ranita 
 // No uso la definida en la librería ya que está definida como "posiciOn", con un cero en medio, más dificil de escribir varias veces
     struct posicion_struct {int x,y;};
 
 // VARIABLES GLOBALES USADAS
-	int global_control = 1;
+	int global_control = 1;					//Cambia a 0 cuando queremos finalizar el programa AKA ctl+c
     int id_semaforo,id_memoria;       		//id de los semaforos y memoria
     char *memoria;                  		//puntero a memoria compartida para la biblioteca
     char *finalizar;                		//puntero a memoria compartida para la variable finalizar
@@ -112,7 +115,7 @@ int semaforo_signal( int semid, int indice);
 
 // -------------------------------------------------------------------------------------------------------
 // Funcion PRESENTACION
-// Hace una pequenia presentacion del programa
+// Hace una pequenia presentacion del programa. No tiene parametros, tampoco retorna nada.
 // -----------------------------------
 void presentacion(){
     fprintf(stderr,"\n");
@@ -135,16 +138,16 @@ void presentacion(){
 
 // -------------------------------------------------------------------------------------------------------
 // Funcion EROR PARAMETROS
-// Muestra como se usa el programa si se introducen mal los parametros
+// Muestra como se usa el programa si se introducen mal los parametros. Esta funcion no tiene parametros, tampoco retorna nada.
 // -----------------------------------
 void error_parametros(){
-    fprintf(stderr,"\nNo se han introducido suficientes argumentos.");
-    fprintf(stderr,"\nPara usar el programa son necesarios dos argumentos, el primero es obligatorio y el segundo es opcional");
-    fprintf(stderr,"\nEl primer parametro es un numero comprendido entre 0 y 1000");
-    fprintf(stderr,"\nEste valor indicara la equivalencia en milisegundos de tiempo real de un tic de reloj (La lentitud con la que el programa funciona)");
-    fprintf(stderr,"\nEl segundo parametro es por defecto 50 y es la medida de tics que una rana madre necesita para descansar entre dos partos.");
-    fprintf(stderr,"\nDebe ser un numero entero estrictamente mayor que 0. Si es 1 o superior, la practica funcionaratanto mas lenta cuanto mayor sea el parametro y no debe consumir CPU");
-    fprintf(stderr,"\nEl programa esta preparado para recibir CRL+C desde el terminal y finalizar la ejecucion del programa\n");
+    fprintf(stderr,"\n-> No se han introducido suficientes argumentos.\n");
+    fprintf(stderr,"\n-> Para usar el programa son necesarios dos argumentos, el primero\n es obligatorio y el segundo es opcional\n");
+    fprintf(stderr,"\n-> El primer parametro es un numero comprendido entre 0 y 1000\n");
+    fprintf(stderr,"\n-> Este valor indicara la equivalencia en milisegundos de tiempo\n real de un tic de reloj (La lentitud con la que el programa\n funciona)\n");
+    fprintf(stderr,"\n-> El segundo parametro es por defecto 50 y es la medida de tics\n que una rana madre necesita para descansar entre dos partos\n.");
+    fprintf(stderr,"\n-> Debe ser un numero entero estrictamente mayor que 0. Si es 1\n o superior, la practica funcionaratanto mas lenta cuanto\n mayor sea el parametro y no debe consumir CPU\n");
+    fprintf(stderr,"\n-> El programa esta preparado para recibir CRL+C desde el terminal\n y finalizar la ejecucion del programa\n");
 
 }
 // FIN ERROR_PARAMETROS -------------------------------------------------------------------------------------------------------
@@ -152,12 +155,13 @@ void error_parametros(){
 
 // -------------------------------------------------------------------------------------------------------
 // Funcion ACABAR
-// Funcion manejadora de la señal SIGINT
+// Funcion manejadora de la señal SIGINT, recibe la se;al s que es un entero
+
 // -----------------------------------
 void acabar(int s){
 	if(s == SIGINT){
-		*finalizar=1;
-		global_control = 0;
+		*finalizar=1;	// Ponemos este puntero a 1
+		global_control = 0;	// Ponemos la variable global a 
 	}
 	
 }
@@ -166,7 +170,7 @@ void acabar(int s){
 
 // -------------------------------------------------------------------------------------------------------
 // Funcion SEMAFORO_WAIT	(Funciona, reutilizadas)
-// Se le tiene que pasar el id del semaforo y un indice 
+// Se le tiene que pasar el id del semaforo y un indice, ambos son enteros
 // -----------------------------------
 int semaforo_wait( int semaforo_id, int indice){
 	/// Estructura
@@ -203,7 +207,7 @@ int semaforo_signal( int semaforo_id, int indice){
 // ------------------------------------------------------------------------------------------------------
 // Funcion ranita (Acabada... Espero...)
 // Se encarga de los procesos hijo, las ranitas
-// Se le pasa la posicion y el indice
+// Se le pasa la posicion y el indice, ambos son enteros.
 // -----------------------------------
 int ranita(int pos, int i){
 
@@ -248,6 +252,7 @@ int ranita(int pos, int i){
 
 			posiciones[pos].x=-2;
 			posiciones[pos].y=-2;
+			// Si hemos llegado aqui es que podemos seguir
 			semaforo_signal(id_semaforo, MAIN_PANTALLA);
 
 			// SIGNAL A LA MEMORIA COMPARTIDA DE LAS POSICIONES
@@ -329,7 +334,7 @@ int ranita(int pos, int i){
 
 // -------------------------------------------------------------------------------------------------------
 // Funcion RANA MADRE  (Acabada... Creo)
-// Recibe un entero
+// Recibe un entero, que es el indice 
 // Es el codigo que se ejecuta para crear los procesos hijos, es decir, las ranitas 
 // -----------------------------------
 int codigo_rana_madre(int i){
@@ -415,7 +420,7 @@ int codigo_rana_madre(int i){
 
 // ------------------------------------------------------------------------------------------------------
 // Funcion genera_aleatorio
-// Genera los elementos de un string de forma aleatoria
+// Genera los elementos de un string de forma aleatoria, recibe un puntero  que es ele string y un entero que es el numero de elementos que tenemos que generar.
 // -----------------------------------
 
 void genera_aleatorio(int *vector,int num){
@@ -446,7 +451,7 @@ void manejadora()
 }
 
 
-// Funcion misleep
+// Funcion misleep sacada de una de las sesiones 
 int misleep(int espera)
 {
 	int i;
@@ -515,6 +520,7 @@ int misleep(int espera)
 // Hace las llamadas principales
 // Recibe los parametros de lanzamiento a traves de argc y argv
 // ARGC es el numero de parametros y ARGV es un puntero a char con los elementos
+// Recibe un entero, el numero de parametros que recibe y un puntero a char.
 // -----------------------------------
 int main (int argc, char *argv[]){
 
@@ -586,7 +592,7 @@ int main (int argc, char *argv[]){
 
 
     // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    // Comenzamos a crear los recursos, semforos, etc.
+    // Comenzamos a crear los recursos:semforos y memoria compartida.
 
     //Creamos el semaforo y guardamos su ID en la variable   
     id_semaforo = semget(IPC_PRIVATE, 10, IPC_CREAT | 0600);     // IPC_PRIVATE porque solo va a ser usado por el proceso y sus descendientes - 10 el num de semaforos
@@ -712,17 +718,17 @@ int main (int argc, char *argv[]){
     //    sleep(1);
     //}
 
+
+	// -------------------------------------------------------------------------------------------------------------
+	// -------------------------------------------------------------------------------------------------------------
     // -------------------------------------------------------------------------------------------------------------
     // -------------------------------------------------------------------------------------------------------------
     // -----------------------------------------   A POR LAS RANAS!!!   --------------------------------------------
     // -------------------------------------------------------------------------------------------------------------
     // -------------------------------------------------------------------------------------------------------------
+	// -------------------------------------------------------------------------------------------------------------
+	// -------------------------------------------------------------------------------------------------------------
     
-	//for ( i = 0; i < 30; i++){
-	//	posiciones[i].x=0;
-	//	posiciones[i].y=0;
-	//}
-
 
     // COMENZAMOS!
     // Le vamos a pasar a la funcion todos los parametros para que comience.
@@ -730,9 +736,9 @@ int main (int argc, char *argv[]){
     BATR_inicio(tics, id_semaforo, long_troncos, long_agua, sentidos_troncos, ms, memoria);
 
     // Creamos los procesos de las ranas madre, las que generan las ranitas
-    // Con un for de 0 a 3 creamos los 4 procesos hijo
+    // Con un for de 0 a 3 creamos los 4 procesos hijo AKA las ranas madre
     for(i=0;i<=3;i++){
-		pids_ranas_madre[i]=fork(); // Guardamos el pid de cada proceso en el array hijo
+		pids_ranas_madre[i]=fork(); // Guardamos el pid de cada proceso en el array de las ranas madre
 		switch (pids_ranas_madre[i]){
 			case -1:    // En el caso de que se produzca un error
 				perror("ERROR. fork");
@@ -744,7 +750,7 @@ int main (int argc, char *argv[]){
 	}//fin for
 
 
-    // Necesitamos un bucle infinito para ejecutar todo, que solo se acaba cuando la variable
+    // Necesitamos un bucle "infinito" para ejecutar todo, que solo se acaba cuando la variable
     // finalizar sea falsa
     while (!*finalizar){
         /* code */
@@ -769,12 +775,12 @@ int main (int argc, char *argv[]){
 				}
 				
 			}
-
 			BATR_avance_troncos(i-4);
 			// Realizamos una pausita
 			BATR_pausita();
 
 		}
+		// Hacemos un signal al semaforo que controla el acceso a las posicinoes para dejarlo "libre"
 		semaforo_signal(id_semaforo, SEMAF_POSICIONES);
     }// FIN WHILE
 
@@ -796,8 +802,6 @@ int main (int argc, char *argv[]){
 		}
 	}
 
-
-	sleep(1);
 
 	// explotamos las ranas que hayan quedado dentro de los troncos para que se pierdan y las cuentas salgan
 	/*
@@ -822,7 +826,8 @@ int main (int argc, char *argv[]){
 	// Vamos a realizar la comprobacion de que las ranas nacidas tiene que ser igual de ranas salvadas mas el de ranas muertas
 
 	//printf("\n\t%d - %d - %d\n", posiciones[30].x, posiciones[31].x, posiciones[32].x);
-	sleep(2);
+	// Hacemos un sleep para ver que todo acabe antes de comprobar las estaditicas. (HAY QUE BORRAR ANTES DE ENTREGAR )
+	sleep(3);
 	BATR_comprobar_estadIsticas(posiciones[30].x, posiciones[31].x, posiciones[32].x );
 
 	// Vamos a mandar la orden con la funcion de biblioteca de que finalice:
@@ -834,6 +839,7 @@ int main (int argc, char *argv[]){
 	// Procedemos a limpiar semaforos y memoria compartida.
 	//Mem
 	shmctl(id_memoria, IPC_RMID, NULL);
+	shmctl(id_posiciones, IPC_RMID, NULL);
 	//Semaf
 	semctl(id_semaforo, 0, IPC_RMID);
 
