@@ -294,8 +294,9 @@ int ranita(int pos, int i){
 
 			BATR_avance_rana_ini(posiciones[pos].x,posiciones[pos].y);
 			BATR_avance_rana(&posiciones[pos].x,&posiciones[pos].y,ARRIBA);
-			BATR_pausa();
+			
 			BATR_avance_rana_fin(posiciones[pos].x,posiciones[pos].y);
+			BATR_pausa();
 		}
 		
 		// SIGNAL A LA MEMORIA COMPARTIDA DE LAS POSICIONES
@@ -783,7 +784,19 @@ int main (int argc, char *argv[]){
 		// Hacemos un signal al semaforo que controla el acceso a las posicinoes para dejarlo "libre"
 		semaforo_signal(id_semaforo, SEMAF_POSICIONES);
     }// FIN WHILE
+//FOR QUE SIRVE PARA CORREGIR LAS RANITAS QUE SE HAN SALIDO POR LOS LADOS O QUE SE HAN SALVADO DESPUES DE PULSAR EL CTRL+C
+	for(i=0;i<30;i++)
+	{
+		if ((posiciones[i].x < 0) || (posiciones[i].x >= 80))
+		{
+			if(posiciones[i].x != 999)
+				posiciones[32].x; // MUERTAS
+		}
+		if (posiciones[i].y == 11){
+			posiciones[31].x;	// SALVADAS
+		}
 
+	}
 
 	// PARA FINALIZAR TRAS RECIBIR EL SIGINT CTL C
 	// Esperemos a que acaben las ranas madre
