@@ -266,9 +266,9 @@ int ranita(int pos, int i){
 			//Comprobamos si no se ha salido alguna rana por un lado
 			// En el caso de perder alguna, dejamos libre dicha posicion y hueco 
 			
-			//semaforo_wait(id_semaforo, SEMAF_RANITAS_MUERTAS);
+			semaforo_wait(id_semaforo, SEMAF_RANITAS_MUERTAS);
 			posiciones[32].x++;	// Aumentamos el contador de las ranas muertas
-			//semaforo_signal(id_semaforo,SEMAF_RANITAS_MUERTAS);
+			semaforo_signal(id_semaforo,SEMAF_RANITAS_MUERTAS);
 
 			posiciones[pos].x=-2;
 			posiciones[pos].y=-2;
@@ -785,19 +785,8 @@ int main (int argc, char *argv[]){
 		semaforo_signal(id_semaforo, SEMAF_POSICIONES);
     }// FIN WHILE
 //FOR QUE SIRVE PARA CORREGIR LAS RANITAS QUE SE HAN SALIDO POR LOS LADOS O QUE SE HAN SALVADO DESPUES DE PULSAR EL CTRL+C
-	for(i=0;i<30;i++)
-	{
-		if ((posiciones[i].x < 0) || (posiciones[i].x >= 80))
-		{
-			if(posiciones[i].x != 999)
-				posiciones[32].x; // MUERTAS
-		}
-		if (posiciones[i].y == 11){
-			posiciones[31].x;	// SALVADAS
-		}
-
-	}
-
+	
+	
 	// PARA FINALIZAR TRAS RECIBIR EL SIGINT CTL C
 	// Esperemos a que acaben las ranas madre
 
@@ -834,6 +823,20 @@ int main (int argc, char *argv[]){
     sleep(1);
 
 	*/
+
+
+	for(i=0;i<30;i++)
+	{
+		if ((posiciones[i].x < 0) || (posiciones[i].x >= 80))
+		{
+			//if(posiciones[i].x != 999)
+				//posiciones[32].x=posiciones[32].x+1; // MUERTAS
+		}
+		if (posiciones[i].y == 11){
+			posiciones[31].x=posiciones[31].x+1;	// SALVADAS
+		}
+
+	}
 
 
 	// Vamos a realizar la comprobacion de que las ranas nacidas tiene que ser igual de ranas salvadas mas el de ranas muertas
